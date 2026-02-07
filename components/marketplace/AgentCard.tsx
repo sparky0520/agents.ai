@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 interface AgentCardProps {
   id: string;
@@ -47,7 +48,9 @@ export function AgentCard({
         </div>
       </CardContent>
       <CardFooter>
-        <Button className="w-full font-mono">View Details</Button>
+        <Button className="w-full font-mono" asChild>
+          <Link href={`/agent/${id}`}>View Details</Link>
+        </Button>
       </CardFooter>
     </Card>
   );
