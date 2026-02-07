@@ -1,0 +1,28 @@
+{
+  "title": "AgentInputs",
+  "type": "object",
+  "properties": {
+    "query": {
+      "title": "Query",
+      "type": "string"
+    },
+    "target_subreddits": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Target Subreddits",
+      "type": "array"
+    },
+    "max_users": {
+      "default": 5,
+      "title": "Max Users",
+      "type": "integer"
+    },
+    "min_intent_score": {
+      "default": 0.7,
+      "title": "Min Intent Score",
+      "type": "number"
+    }
+  },
+  "required": ["query", "target_subreddits"]
+}

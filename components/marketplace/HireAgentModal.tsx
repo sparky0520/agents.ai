@@ -46,7 +46,9 @@ export function HireAgentModal({
     const inputDef = agent.user_inputs[key];
     let finalValue = value;
     if (
-      (inputDef.type === "list" || inputDef.type === "array<string>") &&
+      (inputDef.type === "list" ||
+        inputDef.type === "array<string>" ||
+        inputDef.type === "array") &&
       typeof value === "string"
     ) {
       // We'll keep it as string in state until submit, or parse it here.
@@ -71,7 +73,9 @@ export function HireAgentModal({
         }
 
         if (
-          (schema.type === "list" || schema.type === "array<string>") &&
+          (schema.type === "list" ||
+            schema.type === "array<string>" ||
+            schema.type === "array") &&
           typeof processedInputs[key] === "string"
         ) {
           processedInputs[key] = processedInputs[key]

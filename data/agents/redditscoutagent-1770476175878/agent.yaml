@@ -1,0 +1,27 @@
+name: RedditScoutAgent
+version: 0.1.0
+runtime: python:3.12
+framework: langgraph
+entrypoint: reddit_scout.py
+
+description: |
+  Scouts Reddit for users who show intent to purchase or use a product/service based on a query.
+  Scores candidates based on their comments and provides evidence.
+
+inputs:
+  schema_file: input_schema.json
+
+outputs:
+  schema_file: output_schema.json
+
+environment:
+  variables:
+    - name: REDDIT_CLIENT_ID
+      description: Reddit API Client ID
+      required: true
+    - name: REDDIT_CLIENT_SECRET
+      description: Reddit API Client Secret
+      required: true
+    - name: REDDIT_USER_AGENT
+      description: Reddit API User Agent
+      required: true

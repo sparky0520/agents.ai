@@ -8,6 +8,11 @@ export function Header() {
         AGENTS.AI
       </Link>
       <div className="flex items-center gap-4">
+        <Link href="/publish">
+          <Button variant="ghost" size="sm">
+            Publish Agent
+          </Button>
+        </Link>
         <Button variant="ghost" size="sm">
           Log in
         </Button>
