@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Agent } from "@/types/agent";
+import { HireAgentModal } from "@/components/marketplace/HireAgentModal";
 import { use, useEffect, useState } from "react";
 
 export default function AgentPage({
@@ -31,7 +32,9 @@ export default function AgentPage({
   const { id } = use(params);
   const [data, setData] = useState<Agent | null>(null);
   const [loading, setLoading] = useState(true);
+
   const [error, setError] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     async function fetchAgent() {
@@ -226,8 +229,12 @@ export default function AgentPage({
                       {data.price}
                     </div>
                   </div>
-                  <Button className="w-full font-mono text-lg py-6" size="lg">
-                    Buy License
+                  <Button
+                    className="w-full font-mono text-lg py-6"
+                    size="lg"
+                    onClick={() => setIsModalOpen(true)}
+                  >
+                    Hire
                   </Button>
                   <div className="space-y-3 pt-4 border-t border-border">
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -246,6 +253,13 @@ export default function AgentPage({
           </div>
         </div>
       </main>
+      {data && (
+        <HireAgentModal
+          agent={data}
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+        />
+      )}
     </div>
   );
 }
