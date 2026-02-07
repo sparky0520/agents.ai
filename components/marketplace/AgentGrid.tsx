@@ -1,41 +1,43 @@
-import { AgentCard } from "./AgentCard";
+"use client";
 
-const MOCK_AGENTS = [
-  {
-    id: "1",
-    name: "CodeAssistant v1",
-    description: "Specialized in Python and TypeScript refactoring.",
-    price: "0.05 ETH",
-    tags: ["Coding", "Refactoring", "TypeScript"],
-  },
-  {
-    id: "2",
-    name: "DataAnalyst Pro",
-    description: "Automated data cleaning and visualization generation.",
-    price: "0.1 ETH",
-    tags: ["Data", "Analysis", "Python"],
-  },
-  {
-    id: "3",
-    name: "CopyWriter AI",
-    description: "Generates high-converting marketing copy.",
-    price: "0.02 ETH",
-    tags: ["Marketing", "Writing", "SEO"],
-  },
-  {
-    id: "4",
-    name: "ImageGen X",
-    description: "Create stunning visuals from text prompts.",
-    price: "0.08 ETH",
-    tags: ["Image", "Creative", "Art"],
-  },
-];
+import { useEffect, useState } from "react";
+import { AgentCard } from "./AgentCard";
+import { Agent } from "@/types/agent";
 
 export function AgentGrid() {
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchAgents() {
+      try {
+        const response = await fetch("/api/agents");
+        const data = await response.json();
+        setAgents(data);
+      } catch (error) {
+        console.error("Failed to fetch agents:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchAgents();
+  }, []);
+
+  if (loading) {
+    return <div className="text-center py-10 font-mono">Loading agents...</div>;
+  }
+
   return (
     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {MOCK_AGENTS.map((agent) => (
-        <AgentCard key={agent.id} {...agent} />
+      {agents.map((agent) => (
+        <AgentCard
+          key={agent.id}
+          id={agent.id}
+          name={agent.agent_config.name}
+          description={agent.agent_config.description}
+          price={agent.price}
+          tags={agent.tags}
+        />
       ))}
     </div>
   );

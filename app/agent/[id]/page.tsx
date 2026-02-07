@@ -1,3 +1,5 @@
+"use client";
+
 import { Header } from "@/components/marketplace/Header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,89 +18,64 @@ import {
   Terminal,
   Lock,
   Settings,
-} from "lucide-react"; // Added icons
+} from "lucide-react";
 import Link from "next/link";
 import { Agent } from "@/types/agent";
+import { use, useEffect, useState } from "react";
 
-// Mock data fetch
-function getAgent(id: string): Agent | undefined {
-  const agents: Record<string, Agent> = {
-    "1": {
-      id: "1",
-      // Flattened properties for backward compatibility/UI ease
-      price: "0.05 ETH",
-      tags: ["Lead Gen", "Reddit", "Marketing"],
-      rating: 4.8,
-      reviews: 124,
-      author: "DevCorp",
-      // Schema properties
-      agent_config: {
-        name: "Reddit Scout Agent",
-        description:
-          "Finds potential customers or leads on Reddit based on intent analysis.",
-        version: "0.1.0",
-      },
-      auth_requirements: {
-        environment_variables: [
-          {
-            key: "REDDIT_CLIENT_ID",
-            type: "string",
-            required: true,
-            description: "Reddit App Client ID",
-          },
-          {
-            key: "REDDIT_CLIENT_SECRET",
-            type: "string",
-            required: true,
-            description: "Reddit App Client Secret",
-          },
-          {
-            key: "REDDIT_USER_AGENT",
-            type: "string",
-            required: false,
-            default: "python:agents-ai-python:v0.1.0 (by /u/developer)",
-            description: "User agent string for Reddit API identification",
-          },
-        ],
-      },
-      user_inputs: {
-        query: {
-          type: "string",
-          description:
-            "The search term to find relevant threads (e.g., 'japanese learning app')",
-          required: true,
-        },
-        target_subreddits: {
-          type: "array<string>",
-          description:
-            "List of subreddits to scrape (e.g., ['LearnJapanese', 'languagelearning'])",
-          required: true,
-        },
-        max_users: {
-          type: "integer",
-          description: "Maximum number of candidates to find before stopping",
-          default: 5,
-        },
-        min_intent_score: {
-          type: "float",
-          description:
-            "Minimum intent score (0.0 to 1.0) required to include a candidate",
-          default: 0.7,
-        },
-      },
-    },
-  };
-  return agents[id];
-}
+export default function AgentPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = use(params);
+  const [data, setData] = useState<Agent | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-export default function AgentPage({ params }: { params: { id: string } }) {
-  const agent = getAgent(params.id);
+  useEffect(() => {
+    async function fetchAgent() {
+      try {
+        const response = await fetch(`/api/agents/${id}`);
+        if (!response.ok) {
+          throw new Error("Agent not found");
+        }
+        const agentData = await response.json();
+        setData(agentData);
+      } catch (err) {
+        console.error(err);
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    }
 
-  // Fallback for prototype if id not 1
-  const data = agent || getAgent("1");
+    fetchAgent();
+  }, [id]);
 
-  if (!data) {
-    return <div>Agent not found</div>;
+  if (loading) {
+    return (
+      <div className="flex min-h-screen flex-col bg-background text-foreground">
+        <Header />
+        <main className="flex-1 px-6 py-12 flex items-center justify-center">
+          <div className="font-mono">Loading agent details...</div>
+        </main>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="flex min-h-screen flex-col bg-background text-foreground">
+        <Header />
+        <main className="flex-1 px-6 py-12 flex flex-col items-center justify-center gap-4">
+          <div className="font-mono text-xl">Agent not found</div>
+          <Link href="/">
+            <Button variant="outline">Back to Marketplace</Button>
+          </Link>
+        </main>
+      </div>
+    );
   }
 
   return (
@@ -151,85 +128,90 @@ export default function AgentPage({ params }: { params: { id: string } }) {
               </div>
 
               {/* User Inputs Section */}
-              <div className="space-y-4 pt-4">
-                <h3 className="font-mono text-xl font-semibold flex items-center gap-2">
-                  <Settings className="h-5 w-5" /> Configuration Inputs
-                </h3>
-                <div className="grid gap-4">
-                  {Object.entries(data.user_inputs).map(([key, input]) => (
-                    <Card key={key} className="bg-card/50">
-                      <CardHeader className="p-4 pb-2">
-                        <div className="flex justify-between items-center">
-                          <CardTitle className="font-mono text-sm font-medium">
-                            {key}
-                          </CardTitle>
-                          <div className="flex gap-2">
-                            <Badge variant="outline" className="text-xs">
-                              {input.type}
-                            </Badge>
-                            {input.required && (
-                              <Badge className="text-xs bg-destructive/10 text-destructive hover:bg-destructive/20 border-destructive/20">
-                                Required
+              {data.user_inputs && Object.keys(data.user_inputs).length > 0 && (
+                <div className="space-y-4 pt-4">
+                  <h3 className="font-mono text-xl font-semibold flex items-center gap-2">
+                    <Settings className="h-5 w-5" /> Configuration Inputs
+                  </h3>
+                  <div className="grid gap-4">
+                    {Object.entries(data.user_inputs).map(([key, input]) => (
+                      <Card key={key} className="bg-card/50">
+                        <CardHeader className="p-4 pb-2">
+                          <div className="flex justify-between items-center">
+                            <CardTitle className="font-mono text-sm font-medium">
+                              {key}
+                            </CardTitle>
+                            <div className="flex gap-2">
+                              <Badge variant="outline" className="text-xs">
+                                {input.type}
                               </Badge>
-                            )}
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="p-4 pt-0">
-                        <CardDescription className="text-sm">
-                          {input.description}
-                        </CardDescription>
-                        {input.default !== undefined && (
-                          <div className="mt-2 text-xs text-muted-foreground font-mono">
-                            Default: {JSON.stringify(input.default)}
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-
-              {/* Requirements Section */}
-              <div className="space-y-4 pt-4">
-                <h3 className="font-mono text-xl font-semibold flex items-center gap-2">
-                  <Lock className="h-5 w-5" /> Requirements & Permissions
-                </h3>
-                <Card className="border-l-4 border-l-primary/50">
-                  <CardContent className="p-6 space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      This agent requires the following environment variables to
-                      function correctly. You will be prompted to provide these
-                      securely upon deployment.
-                    </p>
-                    <div className="space-y-3">
-                      {data.auth_requirements.environment_variables.map(
-                        (env) => (
-                          <div
-                            key={env.key}
-                            className="flex items-start gap-3 p-3 rounded-md bg-muted/50"
-                          >
-                            <Terminal className="h-4 w-4 mt-1 text-primary" />
-                            <div className="space-y-1">
-                              <div className="font-mono text-sm font-medium flex items-center gap-2">
-                                {env.key}
-                                {env.required && (
-                                  <span className="text-xs text-destructive">
-                                    *
-                                  </span>
-                                )}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {env.description}
-                              </div>
+                              {input.required && (
+                                <Badge className="text-xs bg-destructive/10 text-destructive hover:bg-destructive/20 border-destructive/20">
+                                  Required
+                                </Badge>
+                              )}
                             </div>
                           </div>
-                        ),
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+                        </CardHeader>
+                        <CardContent className="p-4 pt-0">
+                          <CardDescription className="text-sm">
+                            {input.description}
+                          </CardDescription>
+                          {input.default !== undefined && (
+                            <div className="mt-2 text-xs text-muted-foreground font-mono">
+                              Default: {JSON.stringify(input.default)}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Requirements Section */}
+              {data.auth_requirements &&
+                data.auth_requirements.environment_variables.length > 0 && (
+                  <div className="space-y-4 pt-4">
+                    <h3 className="font-mono text-xl font-semibold flex items-center gap-2">
+                      <Lock className="h-5 w-5" /> Requirements & Permissions
+                    </h3>
+                    <Card className="border-l-4 border-l-primary/50">
+                      <CardContent className="p-6 space-y-4">
+                        <p className="text-sm text-muted-foreground">
+                          This agent requires the following environment
+                          variables to function correctly. You will be prompted
+                          to provide these securely upon deployment.
+                        </p>
+                        <div className="space-y-3">
+                          {data.auth_requirements.environment_variables.map(
+                            (env) => (
+                              <div
+                                key={env.key}
+                                className="flex items-start gap-3 p-3 rounded-md bg-muted/50"
+                              >
+                                <Terminal className="h-4 w-4 mt-1 text-primary" />
+                                <div className="space-y-1">
+                                  <div className="font-mono text-sm font-medium flex items-center gap-2">
+                                    {env.key}
+                                    {env.required && (
+                                      <span className="text-xs text-destructive">
+                                        *
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {env.description}
+                                  </div>
+                                </div>
+                              </div>
+                            ),
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
             </div>
 
             {/* Right Column: Pricing & Action */}
