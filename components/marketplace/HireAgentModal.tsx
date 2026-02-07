@@ -46,8 +46,8 @@ export function HireAgentModal({
     const inputDef = agent.user_inputs[key];
     let finalValue = value;
     if (
-      (inputDef.type === "list" ||
-        inputDef.type === "array<string>" ||
+      (inputDef.type === "list" || // For hardcoded agents
+        inputDef.type === "array<string>" || // For hardcoded agents
         inputDef.type === "array") &&
       typeof value === "string"
     ) {
