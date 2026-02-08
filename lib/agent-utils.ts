@@ -1,108 +1,101 @@
-import fs from "fs";
-import path from "path";
 import yaml from "js-yaml";
-import { Agent, AgentSchema } from "@/types/agent";
+import { Agent } from "@/types/agent";
+import dbConnect from "@/lib/mongodb";
+import AgentModel, { IAgent } from "@/models/Agent";
 
-const AGENTS_DIR = path.join(process.cwd(), "data", "agents");
+export async function getAgents(): Promise<Agent[]> {
+  await dbConnect();
 
-// Ensure the directory exists
-if (!fs.existsSync(AGENTS_DIR)) {
-  fs.mkdirSync(AGENTS_DIR, { recursive: true });
+  const agentsDocs = await AgentModel.find({})
+    .sort({ "metadata.created_at": -1 })
+    .lean();
+
+  return agentsDocs.map((doc) => mapDocToAgent(doc as unknown as IAgent));
 }
 
-export async function getLocalAgents(): Promise<Agent[]> {
-  const agents: Agent[] = [];
+export async function getAgent(id: string): Promise<Agent | null> {
+  await dbConnect();
 
-  if (!fs.existsSync(AGENTS_DIR)) {
-    return [];
-  }
+  const doc = await AgentModel.findOne({ agent_id: id }).lean();
+  if (!doc) return null;
 
-  const entries = fs.readdirSync(AGENTS_DIR, { withFileTypes: true });
+  return mapDocToAgent(doc as unknown as IAgent);
+}
 
-  for (const entry of entries) {
-    if (entry.isDirectory()) {
-      const agentDir = path.join(AGENTS_DIR, entry.name);
-      try {
-        const agent = await loadAgentFromDir(agentDir, entry.name);
-        if (agent) {
-          agents.push(agent);
-        }
-      } catch (error) {
-        console.error(`Failed to load agent from ${entry.name}:`, error);
-      }
+function mapDocToAgent(doc: IAgent): Agent {
+  // We need to reconstruct the Auth and UserInputs from the files or stored metadata.
+  // In the model, we stored them as separate fields? No, I only added basic fields to the model.
+  // I should probably parse the agent.yaml from the files to get the full config,
+  // OR strictly rely on the fields I promoted to the Agent document.
+
+  // Let's assume for listing, we use the promoted fields.
+  // For execution, we might need more, but `Agent` type in frontend mostly displays info.
+
+  // However, `agent_config` property in `Agent` interface has `name`, `description`, `version`.
+  // `auth_requirements` and `user_inputs` are also needed for the UI to generate forms.
+
+  // We should try to find `agent.yaml` and `input_schema.json` in the stored files to reconstruct this if needed,
+  // OR we can rely on what we put in the DB.
+
+  // To keep it performant, let's parse agent.yaml from the `files` array if we must,
+  // or better, let's just make sure we extract these when saving and maybe store them in `metadata` or separate fields if the Model didn't have them.
+  // The Model I created has `name`, `description`, `version`.
+  // It lacks specific structure for `auth` and `inputs`.
+
+  // Implementation choice: Re-parse agent.yaml from stored files.
+  // This is slightly expensive but safest without changing the Model too much or duplicating data complexly.
+  // Actually, I can allow `files` to be optional in the return if we want to optimize listing,
+  // but `mapDocToAgent` needs to return a full `Agent`.
+
+  const agentYamlFile = doc.files.find((f) => f.name === "agent.yaml");
+  let agentConfig: any = {};
+  let auth_requirements = { environment_variables: [] };
+  let user_inputs = {};
+
+  if (agentYamlFile) {
+    try {
+      agentConfig = yaml.load(agentYamlFile.content) as any;
+
+      auth_requirements = {
+        environment_variables:
+          agentConfig.environment?.variables?.map((v: any) => ({
+            key: v.name,
+            type: "string", // default
+            required: v.required,
+            description: v.description,
+            default: v.default,
+          })) || [],
+      };
+    } catch (e) {
+      console.error(`Error parsing agent.yaml for ${doc.agent_id}`, e);
     }
   }
 
-  return agents;
-}
-
-async function loadAgentFromDir(
-  dir: string,
-  id: string,
-): Promise<Agent | null> {
-  const yamlPath = path.join(dir, "agent.yaml");
-  const metaPath = path.join(dir, "metadata.json"); // For extra fields like price, author, etc.
-
-  if (!fs.existsSync(yamlPath)) return null;
-
-  const yamlContent = fs.readFileSync(yamlPath, "utf8");
-  const agentConfig = yaml.load(yamlContent) as any;
-
-  // Load input/output schemas if referenced (simplified for now to just read the schema files if they exist)
-  // In a real app, we'd parse `agentConfig.inputs.schema_file`
-  let user_inputs = {};
-  if (agentConfig.inputs?.schema_file) {
-    const inputSchemaPath = path.join(dir, agentConfig.inputs.schema_file);
-    if (fs.existsSync(inputSchemaPath)) {
-      const inputSchema = JSON.parse(fs.readFileSync(inputSchemaPath, "utf8"));
-      // Transform JSON schema properties to UserInput format if needed,
-      // but for now let's assume the UI handles the raw schema or we map it here.
-      // The current Agent type expects `user_inputs` as a specific object structure.
-      // Let's map it roughly.
+  // Parse input schema
+  // We expect a file path in agentConfig, or we look for 'input_schema.json'
+  const inputSchemaFile = doc.files.find((f) => f.name === "input_schema.json");
+  if (inputSchemaFile) {
+    try {
+      const inputSchema = JSON.parse(inputSchemaFile.content);
       if (inputSchema.properties) {
         user_inputs = inputSchema.properties;
       }
+    } catch (e) {
+      console.error(`Error parsing input_schema.json for ${doc.agent_id}`, e);
     }
   }
 
-  // Load Auth requirements
-  const auth_requirements = {
-    environment_variables:
-      agentConfig.environment?.variables?.map((v: any) => ({
-        key: v.name,
-        type: "string", // default
-        required: v.required,
-        description: v.description,
-        default: v.default,
-      })) || [],
-  };
-
-  // Load extra metadata (price, author, rating)
-  let metadata = {
-    price: "0.1 ETH", // Default
-    tags: [],
-    rating: 0,
-    reviews: 0,
-    author: "Anonymous",
-    id: id,
-  };
-
-  if (fs.existsSync(metaPath)) {
-    const metaContent = JSON.parse(fs.readFileSync(metaPath, "utf8"));
-    metadata = { ...metadata, ...metaContent };
-  }
-
   return {
-    id: metadata.id,
-    price: metadata.price,
-    tags: metadata.tags,
-    rating: metadata.rating,
-    reviews: metadata.reviews,
-    author: metadata.author,
+    id: doc.agent_id,
+    price: doc.price,
+    tags: doc.tags || [],
+    rating: doc.rating,
+    reviews: doc.reviews,
+    author: doc.author,
     agent_config: {
-      name: agentConfig.name,
-      description: agentConfig.description,
-      version: agentConfig.version,
+      name: doc.name, // Use DB field which should match agent.yaml
+      description: doc.description,
+      version: doc.version,
     },
     auth_requirements,
     user_inputs,
@@ -113,44 +106,32 @@ export async function saveAgent(
   files: { name: string; content: string }[],
   metadata: { price: string; tags: string[]; author: string },
 ): Promise<string> {
-  // Find agent.yaml to get the name for the ID
+  await dbConnect();
+
+  // Find agent.yaml to get the name for the ID and metadata
   const agentYamlFile = files.find((f) => f.name === "agent.yaml");
   if (!agentYamlFile) throw new Error("agent.yaml is required");
 
   const agentConfig = yaml.load(agentYamlFile.content) as any;
   const safeName = agentConfig.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
-  // Create a unique ID/folder name (simple timestamp for now to avoid collisions)
-  const id = `${safeName}-${Date.now()}`;
-  const dir = path.join(AGENTS_DIR, id);
+  // Create a unique ID
+  const agent_id = `${safeName}-${Date.now()}`;
 
-  fs.mkdirSync(dir, { recursive: true });
+  // Create new Agent document
+  const newAgent = new AgentModel({
+    agent_id,
+    name: agentConfig.name,
+    description: agentConfig.description,
+    version: agentConfig.version,
+    author: metadata.author,
+    price: metadata.price,
+    tags: metadata.tags,
+    files: files, // Store all files
+    // Defaults for rating, reviews, etc. are in Schema
+  });
 
-  // Save all files
-  for (const file of files) {
-    fs.writeFileSync(path.join(dir, file.name), file.content);
-  }
+  await newAgent.save();
 
-  // Save metadata
-  fs.writeFileSync(
-    path.join(dir, "metadata.json"),
-    JSON.stringify(
-      {
-        id,
-        ...metadata,
-        rating: 0,
-        reviews: 0,
-      },
-      null,
-      2,
-    ),
-  );
-
-  return id;
-}
-
-export async function getLocalAgent(id: string): Promise<Agent | null> {
-  const agentDir = path.join(AGENTS_DIR, id);
-  if (!fs.existsSync(agentDir)) return null;
-  return loadAgentFromDir(agentDir, id);
+  return agent_id;
 }

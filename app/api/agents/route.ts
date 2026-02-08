@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
-import { AGENTS } from "@/lib/agents";
-import { getLocalAgents, saveAgent } from "@/lib/agent-utils";
+import { getAgents, saveAgent } from "@/lib/agent-utils";
 
 export async function GET() {
-  // combine static agents with local agents
-  const staticAgents = Object.values(AGENTS);
-  const localAgents = await getLocalAgents();
+  // fetch agents from MongoDB
+  const agents = await getAgents();
 
-  return NextResponse.json([...staticAgents, ...localAgents]);
+  return NextResponse.json(agents);
 }
 
 export async function POST(request: Request) {

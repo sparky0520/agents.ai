@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { AGENTS } from "@/lib/agents";
-import { getLocalAgent } from "@/lib/agent-utils";
+import { getAgent } from "@/lib/agent-utils";
 
 export async function GET(
   request: Request,
@@ -13,7 +13,7 @@ export async function GET(
 
   // If not found, check local agents
   if (!agent) {
-    const localAgent = await getLocalAgent(id);
+    const localAgent = await getAgent(id);
     if (localAgent) {
       agent = localAgent;
     }

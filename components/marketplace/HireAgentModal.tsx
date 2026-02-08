@@ -104,6 +104,7 @@ export function HireAgentModal({
       });
 
       const payload = {
+        agent_id: agent.id,
         env: lowercasedEnvs,
         inputs: processedInputs,
       };

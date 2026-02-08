@@ -1,0 +1,37 @@
+{
+  "title": "AgentOutput",
+  "type": "object",
+  "properties": {
+    "summary": {
+      "title": "Summary",
+      "type": "string"
+    },
+    "technologies": {
+      "title": "Technologies",
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "stats": {
+      "title": "Repository Stats",
+      "type": "object",
+      "properties": {
+        "stars": { "type": "integer" },
+        "forks": { "type": "integer" },
+        "open_issues": { "type": "integer" },
+        "last_updated": { "type": "string" }
+      }
+    },
+    "file_analysis": {
+      "title": "File Analysis",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string" },
+          "summary": { "type": "string" }
+        }
+      }
+    }
+  },
+  "required": ["summary", "technologies", "stats"]
+}

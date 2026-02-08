@@ -40,7 +40,7 @@ export function AgentCard({
       </CardHeader>
       <CardContent>
         <div className="flex flex-wrap gap-2">
-          {tags.map((tag) => (
+          {(tags || []).map((tag) => (
             <Badge key={tag} variant="secondary" className="font-mono text-xs">
               {tag}
             </Badge>

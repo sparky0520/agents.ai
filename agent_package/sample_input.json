@@ -1,0 +1,6 @@
+{
+  "query": "best budget mechanical keyboard",
+  "target_subreddits": ["MechanicalKeyboards", "keyboards", "buildapc"],
+  "max_users": 10,
+  "min_intent_score": 0.7
+}
