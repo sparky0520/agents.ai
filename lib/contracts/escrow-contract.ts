@@ -136,7 +136,7 @@ export class EscrowContract {
       const operation = this.contract.call(
         "complete_job",
         nativeToScVal(jobId, { type: "u64" }),
-        nativeToScVal(resultsHash, { type: "bytes32" }),
+        nativeToScVal(resultsHash, { type: "bytes" }),
         new Address(tokenAddress).toScVal(),
       );
 
