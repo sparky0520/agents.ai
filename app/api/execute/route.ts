@@ -4,7 +4,12 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const response = await fetch("http://localhost:8000/execute", {
+    let endpoint = "http://localhost:8000/execute";
+    if (body.requests && Array.isArray(body.requests)) {
+      endpoint = "http://localhost:8000/execute_batch";
+    }
+
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

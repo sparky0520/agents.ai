@@ -1,0 +1,17 @@
+name: Writer Agent
+version: 0.1.0
+runtime: python:3.12
+framework: langgraph
+entrypoint: writer_agent.py
+
+description: |
+  Generates a draft article based on provided research notes and tone.
+
+inputs:
+  schema_file: input_schema.json
+
+outputs:
+  schema_file: output_schema.json
+
+environment:
+  variables: []

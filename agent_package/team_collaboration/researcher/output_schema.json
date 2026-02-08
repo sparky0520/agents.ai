@@ -1,0 +1,15 @@
+{
+  "type": "object",
+  "properties": {
+    "research_notes": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "List of key facts and findings"
+    },
+    "sources": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "List of sources used"
+    }
+  }
+}

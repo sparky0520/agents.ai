@@ -4,13 +4,17 @@ import dbConnect from "@/lib/mongodb";
 import AgentModel, { IAgent } from "@/models/Agent";
 
 export async function getAgents(): Promise<Agent[]> {
-  await dbConnect();
+  try {
+    await dbConnect();
+    const agentsDocs = await AgentModel.find({})
+      .sort({ "metadata.created_at": -1 })
+      .lean();
 
-  const agentsDocs = await AgentModel.find({})
-    .sort({ "metadata.created_at": -1 })
-    .lean();
-
-  return agentsDocs.map((doc) => mapDocToAgent(doc as unknown as IAgent));
+    return agentsDocs.map((doc) => mapDocToAgent(doc as unknown as IAgent));
+  } catch (e) {
+    console.error("DB Error in getAgents", e);
+    return [];
+  }
 }
 
 export async function getAgent(id: string): Promise<Agent | null> {
@@ -55,17 +59,18 @@ function mapDocToAgent(doc: IAgent): Agent {
   if (agentYamlFile) {
     try {
       agentConfig = yaml.load(agentYamlFile.content) as any;
-
-      auth_requirements = {
-        environment_variables:
-          agentConfig.environment?.variables?.map((v: any) => ({
-            key: v.name,
-            type: "string", // default
-            required: v.required,
-            description: v.description,
-            default: v.default,
-          })) || [],
-      };
+      if (agentConfig.environment?.variables) {
+        auth_requirements = {
+          environment_variables:
+            agentConfig.environment.variables.map((v: any) => ({
+              key: v.name,
+              type: "string", // default
+              required: v.required,
+              description: v.description,
+              default: v.default,
+            })) || [],
+        };
+      }
     } catch (e) {
       console.error(`Error parsing agent.yaml for ${doc.agent_id}`, e);
     }

@@ -1,0 +1,13 @@
+{
+  "type": "object",
+  "properties": {
+    "final_article": {
+      "type": "string",
+      "description": "The polished article"
+    },
+    "critique": {
+      "type": "string",
+      "description": "Critique and changes made"
+    }
+  }
+}
