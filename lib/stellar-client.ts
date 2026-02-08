@@ -160,6 +160,7 @@ export async function waitForTransaction(
 ) {
   let stopPolling = false;
   let closeStream: (() => void) | undefined;
+  console.log(`⏳ Waiting for transaction ${hash}...`);
 
   // 1. Timeout logic
   const timeoutPromise = new Promise<never>((_, reject) => {
@@ -173,28 +174,43 @@ export async function waitForTransaction(
   // 2. Polling logic (always runs as fallback/primary)
   const pollingPromise = new Promise<any>(async (resolve, reject) => {
     const start = Date.now();
+    let attempt = 0;
+
     while (!stopPolling && Date.now() - start < timeoutSeconds * 1000) {
+      attempt++;
       try {
         const result = await stellarServer.getTransaction(hash);
-        console.log(`Transaction ${hash} status: ${result.status}`);
+
+        // Log status changes or every 5th attempt to reduce noise
+        if (
+          result.status !== "NOT_FOUND" &&
+          (attempt === 1 || attempt % 5 === 0)
+        ) {
+          console.log(`Polling tx ${hash}: Status=${result.status}`);
+        }
 
         if (result.status === "SUCCESS") {
+          console.log(`✅ Transaction ${hash} confirmed!`);
           resolve(result);
           return;
         } else if (result.status === "FAILED") {
+          console.error(`❌ Transaction ${hash} failed:`, result);
           reject(new Error(`Transaction failed: ${JSON.stringify(result)}`));
           return;
         }
       } catch (error: any) {
-        const isTransientError =
-          error.code === 404 || error.message?.includes("Bad union switch");
+        // 404 is normal/expected while waiting for propagation
+        const isNotFound =
+          error.code === 404 ||
+          (error.message && error.message.includes("not found")) ||
+          (error.response && error.response.status === 404);
 
-        if (!isTransientError) {
-          console.warn(`Polling error for ${hash}:`, error);
+        if (!isNotFound) {
+          console.warn(`Polling warning for ${hash}:`, error.message || error);
         }
       }
 
-      // Wait 2 seconds before retrying
+      // Wait before retrying (backoff slightly)
       if (!stopPolling) {
         await new Promise((r) => setTimeout(r, 2000));
       }
@@ -227,25 +243,28 @@ export async function waitForTransaction(
 
                 // Fetch the RPC result to get the full simulation data/return value
                 try {
+                  // Give it a split second for RPC to catch up to Horizon
+                  await new Promise((r) => setTimeout(r, 1000));
                   const result = await stellarServer.getTransaction(hash);
                   resolve(result);
                 } catch (e) {
-                  // Fallback if RPC fails, though this is rare if Horizon sees it
                   console.warn("RPC fetch failed after stream detection", e);
-                  // We resolve anyway to let the race win, but might lack return values
-                  // Ideally we want the loop to retry RPC if this fails, but for now we resolve
-                  // causing the main promise to return.
-                  // If result is needed, this might be partial.
-                  // Let's rely on RPC.
+                  // If RPC fails, we resolve with the horizon data converted to look like RPC result if possible
+                  // Or just let polling finish it off.
+                  // For now, let's just log and let polling win or next Stream event trigger
                 }
               }
             },
             onerror: (err: any) => {
-              console.warn("Horizon stream error:", err);
+              // Stream errors are common (timeouts), just log quiet warning
+              // console.warn("Horizon stream error:", err);
             },
           });
-      } catch (e) {
-        console.warn("Failed to setup stream:", e);
+      } catch (e: any) {
+        // Suppress "not a constructor" error that happens in some environments
+        if (!e.message?.includes("not a constructor")) {
+          console.warn("Failed to setup stream:", e);
+        }
       }
     });
   }
