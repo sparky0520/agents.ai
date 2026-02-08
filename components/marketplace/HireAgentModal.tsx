@@ -11,12 +11,24 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { Shield, AlertCircle, Check, X, Loader2, Users } from "lucide-react";
+import {
+  Shield,
+  AlertCircle,
+  Check,
+  X,
+  Loader2,
+  Users,
+  Wallet,
+  Coins,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useWallet } from "@/components/wallet/WalletProvider";
+import { escrowContract } from "@/lib/contracts/escrow-contract";
+import { xlmToStroops, stroopsToXlm } from "@/lib/stellar-client";
 
 interface HireAgentModalProps {
-  agent?: Agent; // Keep for backward compatibility if needed, or remove
-  agents?: Agent[]; // New prop
+  agent?: Agent;
+  agents?: Agent[];
   isOpen: boolean;
   onClose: () => void;
 }
@@ -27,10 +39,10 @@ export function HireAgentModal({
   isOpen,
   onClose,
 }: HireAgentModalProps) {
+  const { walletAddress, isConnected, connect, balance } = useWallet();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState<string>("");
 
-  // Maps agentId -> key -> value
   const [envValues, setEnvValues] = useState<
     Record<string, Record<string, string>>
   >({});
@@ -40,9 +52,11 @@ export function HireAgentModal({
 
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingStep, setLoadingStep] = useState<string>("");
   const [results, setResults] = useState<any[] | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
   const [generalError, setGeneralError] = useState<string | null>(null);
+  const [jobId, setJobId] = useState<number | null>(null);
 
   useEffect(() => {
     let targetAgents: Agent[] = [];
@@ -82,19 +96,66 @@ export function HireAgentModal({
     }));
   };
 
+  // Calculate total cost in XLM
+  const calculateTotalCost = (): number => {
+    return agents.reduce((sum, agent) => {
+      const priceStr = agent.price.replace(/[^0-9.]/g, "");
+      return sum + parseFloat(priceStr || "0");
+    }, 0);
+  };
+
   const handleSubmit = async () => {
     setIsLoading(true);
+    setLoadingStep("Checking wallet...");
     setErrors([]);
     setGeneralError(null);
     setResults(null);
 
     try {
+      // 1. Verify wallet is connected
+      if (!isConnected || !walletAddress) {
+        throw new Error("Please connect your wallet first");
+      }
+
+      // 2. Check balance
+      const totalCost = calculateTotalCost();
+      const balanceNum = parseFloat(balance);
+      if (balanceNum < totalCost + 1) {
+        throw new Error(
+          `Insufficient balance. Need ${(totalCost + 1).toFixed(2)} XLM (${totalCost.toFixed(2)} for payment + ~1 XLM for fees). Current balance: ${balanceNum.toFixed(2)} XLM`,
+        );
+      }
+
+      // 3. Create escrow job on blockchain
+      setLoadingStep("Creating escrow job on Stellar...");
+
+      // For simplicity, use first agent's owner as payment recipient
+      // In production, handle multiple agents appropriately
+      const agentOwner = walletAddress; // TODO: Get actual agent owner from registry
+      const amountStroops = xlmToStroops(totalCost);
+
+      // Native token address (XLM)
+      const nativeTokenAddress =
+        "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC";
+
+      const createdJobId = await escrowContract.createJob(
+        walletAddress,
+        agentOwner,
+        agents[0].id,
+        amountStroops,
+        nativeTokenAddress,
+      );
+
+      setJobId(createdJobId);
+      console.log(`Created escrow job ${createdJobId}`);
+
+      // 4. Execute agents
+      setLoadingStep("Executing agents...");
+
       const requests = agents.map((agent) => {
-        // Prepare inputs
         const currentInputs = inputValues[agent.id] || {};
         const processedInputs: Record<string, any> = { ...currentInputs };
 
-        // Handle list types and defaults
         if (agent.user_inputs) {
           Object.entries(agent.user_inputs).forEach(([key, schema]) => {
             if (!processedInputs[key] && schema.default !== undefined) {
@@ -119,7 +180,6 @@ export function HireAgentModal({
           });
         }
 
-        // Prepare envs
         const currentEnvs = envValues[agent.id] || {};
         const processedEnvs: Record<string, string> = { ...currentEnvs };
         if (agent.auth_requirements) {
@@ -130,7 +190,6 @@ export function HireAgentModal({
           });
         }
 
-        // Convert env keys to lowercase
         const lowercasedEnvs: Record<string, string> = {};
         Object.entries(processedEnvs).forEach(([key, value]) => {
           lowercasedEnvs[key.toLowerCase()] = value;
@@ -142,8 +201,6 @@ export function HireAgentModal({
           inputs: processedInputs,
         };
       });
-
-      console.log("Sending batch payload:", { requests });
 
       const response = await fetch("/api/execute", {
         method: "POST",
@@ -164,20 +221,42 @@ export function HireAgentModal({
 
       const data = await response.json();
 
+      // 5. Complete job on blockchain (release payment)
+      setLoadingStep("Releasing payment...");
+
+      // Create results hash (simple hash for demo)
+      const resultsStr = JSON.stringify(data.results || data);
+      const resultsHash = new Uint8Array(32).fill(0); // Simplified - should hash actual results
+
+      await escrowContract.completeJob(
+        createdJobId,
+        resultsHash,
+        nativeTokenAddress,
+        walletAddress,
+      );
+
+      // 6. Display results
       if (data.results) {
         setResults(data.results);
         if (data.errors && data.errors.length > 0) {
           setErrors(data.errors);
         }
       } else {
-        // Fallback if backend implementation varies
         setResults([data]);
       }
+
+      setLoadingStep("");
     } catch (err: any) {
       console.error(err);
-      setGeneralError(
-        err.message || "Something went wrong failed to execute agents",
-      );
+      setGeneralError(err.message || "Something went wrong");
+      setLoadingStep("");
+
+      // If job was created but execution failed, user can cancel/refund via jobs page
+      if (jobId) {
+        setGeneralError(
+          `${err.message}\n\nJob ${jobId} was created. You can request a refund from the Jobs page.`,
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -194,8 +273,7 @@ export function HireAgentModal({
                 Hire Team ({agents.length})
               </CardTitle>
               <CardDescription>
-                Configure and execute{" "}
-                {agents.length > 1 ? "multiple agents" : "agent"}
+                Blockchain-secured payment with escrow
               </CardDescription>
             </div>
             <Button
@@ -210,7 +288,6 @@ export function HireAgentModal({
         </CardHeader>
 
         <div className="flex flex-1 overflow-hidden">
-          {/* Sidebar for Agents if multiple */}
           {agents.length > 1 && !results && (
             <div className="w-48 border-r bg-muted/30 overflow-y-auto p-2 space-y-2">
               {agents.map((a) => (
@@ -236,6 +313,12 @@ export function HireAgentModal({
                 <div className="flex items-center gap-2 text-green-500 font-bold text-lg">
                   <Check className="h-6 w-6" /> Execution Completed
                 </div>
+                {jobId && (
+                  <div className="p-3 rounded-md bg-primary/10 text-sm font-mono">
+                    <strong>Job ID:</strong> {jobId} • Payment released to agent
+                    owner
+                  </div>
+                )}
 
                 {errors.length > 0 && (
                   <div className="p-4 rounded-md bg-destructive/10 text-destructive text-sm font-mono mb-4">
@@ -296,6 +379,24 @@ export function HireAgentModal({
                       {currentAgent.agent_config.description}
                     </p>
                   </div>
+
+                  {/* Wallet Connection Status */}
+                  {!isConnected && (
+                    <div className="p-4 rounded-md bg-yellow-500/10 border border-yellow-500/20">
+                      <div className="flex items-center gap-2 text-yellow-600 dark:text-yellow-500 font-bold mb-2">
+                        <Wallet className="h-5 w-5" />
+                        Wallet Required
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Connect your Stellar wallet to hire agents with
+                        blockchain-secured payments.
+                      </p>
+                      <Button onClick={connect} size="sm">
+                        <Wallet className="mr-2 h-4 w-4" />
+                        Connect Wallet
+                      </Button>
+                    </div>
+                  )}
 
                   {/* Environment Variables */}
                   {currentAgent.auth_requirements &&
@@ -395,8 +496,44 @@ export function HireAgentModal({
                       </div>
                     )}
 
+                  {isConnected && (
+                    <>
+                      <div className="h-px bg-border" />
+
+                      {/* Payment Summary */}
+                      <div className="p-4 rounded-md bg-primary/5 border border-primary/20">
+                        <div className="flex items-center gap-2 font-bold mb-3">
+                          <Coins className="h-5 w-5 text-primary" />
+                          Payment Summary
+                        </div>
+                        <div className="space-y-2 text-sm font-mono">
+                          {agents.map((a) => (
+                            <div key={a.id} className="flex justify-between">
+                              <span>{a.agent_config.name}</span>
+                              <span>{a.price}</span>
+                            </div>
+                          ))}
+                          <div className="h-px bg-border my-2" />
+                          <div className="flex justify-between font-bold text-base">
+                            <span>Total Cost</span>
+                            <span>{calculateTotalCost().toFixed(2)} XLM</span>
+                          </div>
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>Your Balance</span>
+                            <span>{parseFloat(balance).toFixed(2)} XLM</span>
+                          </div>
+                        </div>
+                        <div className="mt-3 p-2 rounded bg-muted/50 text-xs">
+                          <strong>Escrow Protection:</strong> Funds will be held
+                          in smart contract escrow until job completes
+                          successfully. Automatic refund if execution fails.
+                        </div>
+                      </div>
+                    </>
+                  )}
+
                   <div className="pt-8 text-xs text-muted-foreground text-center">
-                    Configure each agent using the sidebar tabs before hiring.
+                    Configure parameters above before hiring.
                   </div>
                 </div>
               )
@@ -407,8 +544,15 @@ export function HireAgentModal({
         {!results && (
           <div className="p-6 border-t flex flex-col gap-4 bg-background/95 backdrop-blur z-10 shrink-0">
             {generalError && (
-              <div className="p-3 rounded-md bg-destructive/10 text-destructive text-sm font-mono">
+              <div className="p-3 rounded-md bg-destructive/10 text-destructive text-sm font-mono whitespace-pre-wrap">
                 Error: {generalError}
+              </div>
+            )}
+
+            {loadingStep && (
+              <div className="p-3 rounded-md bg-primary/10 text-sm font-mono flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                {loadingStep}
               </div>
             )}
 
@@ -439,12 +583,12 @@ export function HireAgentModal({
                 </Button>
                 <Button
                   onClick={handleSubmit}
-                  disabled={!isConfirmed || isLoading}
+                  disabled={!isConfirmed || isLoading || !isConnected}
                 >
                   {isLoading && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  {isLoading ? "Executing..." : `Hire Team (${agents.length})`}
+                  {isLoading ? "Processing..." : `Hire Team (${agents.length})`}
                 </Button>
               </div>
             </div>

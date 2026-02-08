@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { WalletConnectButton } from "@/components/wallet/WalletConnectButton";
+import { Briefcase } from "lucide-react";
 
 export function Header() {
   return (
@@ -8,15 +10,18 @@ export function Header() {
         AGENTS.AI
       </Link>
       <div className="flex items-center gap-4">
+        <Link href="/jobs">
+          <Button variant="ghost" size="sm">
+            <Briefcase className="mr-2 h-4 w-4" />
+            My Jobs
+          </Button>
+        </Link>
         <Link href="/publish">
           <Button variant="ghost" size="sm">
             Publish Agent
           </Button>
         </Link>
-        <Button variant="ghost" size="sm">
-          Log in
-        </Button>
-        <Button size="sm">Sign up</Button>
+        <WalletConnectButton />
       </div>
     </header>
   );

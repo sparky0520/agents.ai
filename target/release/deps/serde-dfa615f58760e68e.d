@@ -1,0 +1,14 @@
+C:\Users\sparky\OneDrive\Desktop\agents.ai\target\release\deps\serde-dfa615f58760e68e.d: C:\Users\sparky\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\lib.rs C:\Users\sparky\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\integer128.rs C:\Users\sparky\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\mod.rs C:\Users\sparky\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\de.rs C:\Users\sparky\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\ser.rs C:\Users\sparky\OneDrive\Desktop\agents.ai\target\release\build\serde-079941d334f757dd\out/private.rs
+
+C:\Users\sparky\OneDrive\Desktop\agents.ai\target\release\deps\libserde-dfa615f58760e68e.rlib: C:\Users\sparky\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\lib.rs C:\Users\sparky\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\integer128.rs C:\Users\sparky\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\mod.rs C:\Users\sparky\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\de.rs C:\Users\sparky\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\ser.rs C:\Users\sparky\OneDrive\Desktop\agents.ai\target\release\build\serde-079941d334f757dd\out/private.rs
+
+C:\Users\sparky\OneDrive\Desktop\agents.ai\target\release\deps\libserde-dfa615f58760e68e.rmeta: C:\Users\sparky\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\lib.rs C:\Users\sparky\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\integer128.rs C:\Users\sparky\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\mod.rs C:\Users\sparky\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\de.rs C:\Users\sparky\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\ser.rs C:\Users\sparky\OneDrive\Desktop\agents.ai\target\release\build\serde-079941d334f757dd\out/private.rs
+
+C:\Users\sparky\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\lib.rs:
+C:\Users\sparky\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\integer128.rs:
+C:\Users\sparky\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\mod.rs:
+C:\Users\sparky\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\de.rs:
+C:\Users\sparky\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\ser.rs:
+C:\Users\sparky\OneDrive\Desktop\agents.ai\target\release\build\serde-079941d334f757dd\out/private.rs:
+
+# env-dep:OUT_DIR=C:\\Users\\sparky\\OneDrive\\Desktop\\agents.ai\\target\\release\\build\\serde-079941d334f757dd\\out
