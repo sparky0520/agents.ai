@@ -65,7 +65,7 @@ export const AGENTS: Record<string, Agent> = {
   },
   "2": {
     id: "2",
-    price: "0.1 ETH",
+    price: "0.10 XLM",
     tags: ["Data", "Analysis", "Python"],
     rating: 4.5,
     reviews: 89,

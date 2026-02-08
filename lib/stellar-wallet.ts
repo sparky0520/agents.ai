@@ -1,6 +1,7 @@
 import {
   isConnected,
   getPublicKey,
+  requestAccess,
   signTransaction as freighterSign,
 } from "@stellar/freighter-api";
 
@@ -23,6 +24,7 @@ export async function isWalletInstalled(): Promise<boolean> {
  */
 export async function connectWallet(): Promise<string> {
   try {
+    console.log("Checking if Freighter is installed...");
     const installed = await isWalletInstalled();
 
     if (!installed) {
@@ -31,19 +33,69 @@ export async function connectWallet(): Promise<string> {
       );
     }
 
-    const publicKey = await getPublicKey();
+    console.log("Freighter is installed, requesting access...");
 
-    if (!publicKey) {
-      throw new Error("Failed to get public key from Freighter");
+    // Use requestAccess to trigger the permission popup
+    // It returns the public key directly as a string
+    const publicKey = await requestAccess();
+
+    console.log("Access result (public key):", publicKey);
+
+    if (!publicKey || publicKey === "") {
+      throw new Error(
+        "Failed to get public key. Please make sure Freighter is unlocked and try again.",
+      );
+    }
+
+    // Verify connection by requesting a test signature
+    // This ensures localhost is properly connected to Freighter
+    console.log("Verifying connection with test signature...");
+    try {
+      const testMessage = `Verify connection to ${window.location.origin}`;
+      const testXdr = Buffer.from(testMessage).toString("base64");
+
+      await freighterSign(testXdr, {
+        networkPassphrase: "Test SDF Network ; September 2015",
+        accountToSign: publicKey,
+      });
+      console.log("✅ Connection verified!");
+    } catch (sigError: any) {
+      // If user cancels signature, that's okay - connection is still established
+      if (sigError.message?.includes("User declined")) {
+        console.log(
+          "User cancelled verification, but connection is established",
+        );
+      } else {
+        console.warn("Signature verification failed:", sigError);
+      }
     }
 
     // Store in localStorage for persistence
     localStorage.setItem("stellar_wallet_address", publicKey);
+    console.log("✅ Wallet connected successfully:", publicKey);
 
     return publicKey;
   } catch (error: any) {
-    console.error("Error connecting wallet:", error);
-    throw new Error(error.message || "Failed to connect wallet");
+    console.error("❌ Error connecting wallet:", error);
+
+    // Provide more specific error messages
+    if (
+      error.message?.includes("User declined") ||
+      error.message?.includes("rejected")
+    ) {
+      throw new Error(
+        "Connection rejected. Please approve the Freighter popup to connect.",
+      );
+    }
+
+    if (error.message?.includes("not installed")) {
+      throw error; // Already has good message
+    }
+
+    throw new Error(
+      error.message ||
+        "Failed to connect wallet. Please make sure Freighter is unlocked and try again.",
+    );
   }
 }
 
@@ -101,12 +153,4 @@ export async function signTransaction(
 
     throw new Error(error.message || "Failed to sign transaction");
   }
-}
-
-/**
- * Request account access (triggers Freighter popup)
- * This should be called before any wallet operations
- */
-export async function requestAccess(): Promise<string> {
-  return await connectWallet();
 }

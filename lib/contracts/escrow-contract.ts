@@ -1,10 +1,11 @@
 import {
   Contract,
-  SorobanRpc,
   Address,
   nativeToScVal,
   scValToNative,
+  TransactionBuilder,
 } from "@stellar/stellar-sdk";
+import { rpc } from "@stellar/stellar-sdk";
 import {
   stellarServer,
   networkPassphrase,
@@ -83,28 +84,27 @@ export class EscrowContract {
       const simulated =
         await stellarServer.simulateTransaction(builtTransaction);
 
-      if (SorobanRpc.Api.isSimulationError(simulated)) {
+      if (rpc.Api.isSimulationError(simulated)) {
         throw new Error(`Simulation failed: ${simulated.error}`);
       }
 
       // Prepare transaction with auth
-      const preparedTx = SorobanRpc.assembleTransaction(
-        builtTransaction,
-        simulated,
-      ).build();
+      const preparedTx = rpc
+        .assembleTransaction(builtTransaction, simulated)
+        .build();
 
       // Sign with wallet
       const signedXdr = await signTransaction(
         preparedTx.toXDR(),
         networkPassphrase,
       );
-      const signedTx = new Contract(signedXdr);
+      const signedTx = TransactionBuilder.fromXDR(signedXdr, networkPassphrase);
 
       // Submit transaction
       const result = await submitTransaction(signedTx as any);
 
       // Wait for confirmation
-      const confirmed = await waitForTransaction(result.hash);
+      const confirmed = await waitForTransaction(result.hash, 180, hirer);
 
       // Extract job ID from return value
       if (confirmed.returnValue) {
@@ -147,25 +147,24 @@ export class EscrowContract {
       // Simulate and prepare
       const simulated =
         await stellarServer.simulateTransaction(builtTransaction);
-      if (SorobanRpc.Api.isSimulationError(simulated)) {
+      if (rpc.Api.isSimulationError(simulated)) {
         throw new Error(`Simulation failed: ${simulated.error}`);
       }
 
-      const preparedTx = SorobanRpc.assembleTransaction(
-        builtTransaction,
-        simulated,
-      ).build();
+      const preparedTx = rpc
+        .assembleTransaction(builtTransaction, simulated)
+        .build();
 
       // Sign and submit
       const signedXdr = await signTransaction(
         preparedTx.toXDR(),
         networkPassphrase,
       );
-      const signedTx = new Contract(signedXdr);
+      const signedTx = TransactionBuilder.fromXDR(signedXdr, networkPassphrase);
       const result = await submitTransaction(signedTx as any);
 
       // Wait for confirmation
-      await waitForTransaction(result.hash);
+      await waitForTransaction(result.hash, 180, signerAddress);
     } catch (error: any) {
       console.error("Error completing job:", error);
       throw new Error(error.message || "Failed to complete job");
@@ -197,25 +196,24 @@ export class EscrowContract {
       // Simulate and prepare
       const simulated =
         await stellarServer.simulateTransaction(builtTransaction);
-      if (SorobanRpc.Api.isSimulationError(simulated)) {
+      if (rpc.Api.isSimulationError(simulated)) {
         throw new Error(`Simulation failed: ${simulated.error}`);
       }
 
-      const preparedTx = SorobanRpc.assembleTransaction(
-        builtTransaction,
-        simulated,
-      ).build();
+      const preparedTx = rpc
+        .assembleTransaction(builtTransaction, simulated)
+        .build();
 
       // Sign and submit
       const signedXdr = await signTransaction(
         preparedTx.toXDR(),
         networkPassphrase,
       );
-      const signedTx = new Contract(signedXdr);
+      const signedTx = TransactionBuilder.fromXDR(signedXdr, networkPassphrase);
       const result = await submitTransaction(signedTx as any);
 
       // Wait for confirmation
-      await waitForTransaction(result.hash);
+      await waitForTransaction(result.hash, 180, signerAddress);
     } catch (error: any) {
       console.error("Error cancelling job:", error);
       throw new Error(error.message || "Failed to cancel job");
@@ -245,7 +243,7 @@ export class EscrowContract {
       const simulated =
         await stellarServer.simulateTransaction(builtTransaction);
 
-      if (SorobanRpc.Api.isSimulationError(simulated)) {
+      if (rpc.Api.isSimulationError(simulated)) {
         throw new Error(`Simulation failed: ${simulated.error}`);
       }
 
@@ -283,7 +281,7 @@ export class EscrowContract {
       const simulated =
         await stellarServer.simulateTransaction(builtTransaction);
 
-      if (SorobanRpc.Api.isSimulationError(simulated)) {
+      if (rpc.Api.isSimulationError(simulated)) {
         throw new Error(`Simulation failed: ${simulated.error}`);
       }
 

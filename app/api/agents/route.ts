@@ -46,7 +46,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const price = (formData.get("price") as string) || "0.1 ETH";
+    const price = (formData.get("price") as string) || "0.10 XLM";
     const tags = ((formData.get("tags") as string) || "")
       .split(",")
       .map((t) => t.trim())

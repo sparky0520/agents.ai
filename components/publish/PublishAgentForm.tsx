@@ -16,7 +16,7 @@ import { useRouter } from "next/navigation";
 export function PublishAgentForm() {
   const router = useRouter();
   const [files, setFiles] = useState<FileList | null>(null);
-  const [price, setPrice] = useState("0.1 ETH");
+  const [price, setPrice] = useState("0.10 XLM");
   const [tags, setTags] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -149,7 +149,7 @@ export function PublishAgentForm() {
               <Input
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
-                placeholder="e.g. 0.1 ETH"
+                placeholder="e.g. 0.10 XLM"
               />
             </div>
             <div className="space-y-2">
