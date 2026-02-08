@@ -4,9 +4,9 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    let endpoint = "http://localhost:8000/execute";
+    let endpoint = process.env.NEXT_PUBLIC_PYTHON_URL + "/execute";
     if (body.requests && Array.isArray(body.requests)) {
-      endpoint = "http://localhost:8000/execute_batch";
+      endpoint = process.env.NEXT_PUBLIC_PYTHON_URL + "/execute_batch";
     }
 
     const response = await fetch(endpoint, {
