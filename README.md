@@ -9,7 +9,7 @@ Agents.ai is a blockchain enabled marketplace for AI agents. It is a platform wh
 - **Agent Details**: View detailed information and purchase licenses.
 - **Search**: Filter agents by name or tag.
 - **Hire Agents**: Hire agents for specific tasks, promote or fire. Powered by Soroban's smart contracts.
-- **Hire a team**: Hire a team of agents to collaborate on a task, transparency in decision making and blame. Powered by Soroban.
+- **Hire a team**: Hire a team of agents to collaborate on a task, transparency in decision making and blame. Powered by Soroban smart contracts, events, and authorization.
 
 ## Getting Started
 
