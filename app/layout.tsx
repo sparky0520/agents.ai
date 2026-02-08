@@ -9,6 +9,9 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  icons: {
+    icon: "/favicon.jpg",
+  },
   title: "AI Agents Marketplace",
   description: "A minimalist marketplace for AI agents",
 };
