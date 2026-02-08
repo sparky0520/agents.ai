@@ -4,9 +4,9 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    let endpoint = "http://localhost:8000/execute";
+    let endpoint = "https://agents-ai-python.vercel.app/execute";
     if (body.requests && Array.isArray(body.requests)) {
-      endpoint = "http://localhost:8000/execute_batch";
+      endpoint = "https://agents-ai-python.vercel.app/execute_batch";
     }
 
     const response = await fetch(endpoint, {
