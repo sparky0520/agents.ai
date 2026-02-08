@@ -1,9 +1,0 @@
-{
-  "type": "object",
-  "properties": {
-    "draft_article": {
-      "type": "string",
-      "description": "The generated draft article"
-    }
-  }
-}
