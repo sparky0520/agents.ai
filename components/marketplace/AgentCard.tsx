@@ -41,7 +41,7 @@ export function AgentCard({
               <Checkbox
                 checked={isSelected}
                 onCheckedChange={(c) => onToggleSelect(c as boolean)}
-                className="mt-1"
+                className=""
               />
             )}
             <CardTitle className="font-mono text-xl">{name}</CardTitle>
